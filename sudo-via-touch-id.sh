@@ -19,8 +19,14 @@ NEWTEXT='auth       sufficient     pam_tid.so'
 	# this is the file we are going to add it to
 FILE='/etc/pam.d/sudo'
 
+IGNORE_WHITESPACE=true
+
 	# this checks to see if the text is already in the file we want to modify
-fgrep -q "$NEWTEXT" "$FILE"
+if $IGNORE_WHITESPACE; then
+	grep -q 'auth \+sufficient \+pam_tid.so' "$FILE"
+else
+	fgrep -q "$NEWTEXT" "$FILE"
+fi
 
 	# here we save the exit code of the 'fgrep' command
 EXIT="$?"
@@ -46,13 +52,23 @@ else
 	TEMPFILE="${TMPDIR-/tmp}/${NAME}.${TIME}.$$.$RANDOM.txt"
 
 		# get comment line (this is usually the first line of the file)
-	egrep '^#' "$FILE" >| "$TEMPFILE"
-
+	#* Only extract the first line, and only write it if it's a comment
+	#// egrep '^#' "$FILE" >| "$TEMPFILE"
+	read -r firstline<$FILE
+	if [[ ${firstline:0:1} == '#' ]]; then 
+		echo "$firstline" >| "$TEMPFILE"
 		# add our custom line
-	echo "$NEWTEXT" >> "$TEMPFILE"
+		echo "$NEWTEXT" >> "$TEMPFILE"
+	else
+		echo "$NEWTEXT" >| "$TEMPFILE"
+		echo "$firstline" >> "$TEMPFILE"
+	fi
+
+	#* Write all but the first line of the original sudo file to the temp file
+	tail +2 $FILE >> "$TEMPFILE"
 
 		# get the other lines
-	egrep -v '^#' "$FILE" >> "$TEMPFILE"
+	#// egrep -v '^#' "$FILE" >> "$TEMPFILE"
 
 		# tell the user what the filename is
 		# useful for debugging, if needed
@@ -84,25 +100,25 @@ fi
 	# if iTerm is installed, check to see if one of its settings is set to work with this setting
 	# and if not, tell the user what they need to change
 
-if [ -d '/Applications/iTerm.app' -o -d "$HOME/Applications/iTerm.app" ]
-then
-
-	PREFERENCE=$(defaults read com.googlecode.iterm2 BootstrapDaemon 2>/dev/null)
-
-	if [[ "$PREFERENCE" == "0" ]]
-	then
-
-		echo "$NAME: 'iTerm' preference is already set properly."
-
-	else
-
-		echo "$NAME [WARNING]: setting iTerm preferences via 'defaults write' may not work while iTerm is running."
-		echo "$NAME [WARNING]: Be sure to turn OFF this setting in iTerm's Preferences:"
-		echo "	Preferences » Advanced » 'Allow sessions to survive logging out and back in'"
-
-	fi
-
-fi
+#// if [ -d '/Applications/iTerm.app' -o -d "$HOME/Applications/iTerm.app" ]
+#// then
+#// 
+#// 	PREFERENCE=$(defaults read com.googlecode.iterm2 BootstrapDaemon 2>/dev/null)
+#// 
+#// 	if [[ "$PREFERENCE" == "0" ]]
+#// 	then
+#// 
+#// 		echo "$NAME: 'iTerm' preference is already set properly."
+#// 
+#// 	else
+#// 
+#// 		echo "$NAME [WARNING]: setting iTerm preferences via 'defaults write' may not work while iTerm is running."
+#// 		echo "$NAME [WARNING]: Be sure to turn OFF this setting in iTerm's Preferences:"
+#// 		echo "	Preferences » Advanced » 'Allow sessions to survive logging out and back in'"
+#// 
+#// 	fi
+#// 
+#// fi
 
 exit 0
 #EOF
