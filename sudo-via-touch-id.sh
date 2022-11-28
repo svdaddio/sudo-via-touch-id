@@ -20,6 +20,7 @@ NEWTEXT='auth       sufficient     pam_tid.so'
 FILE='/etc/pam.d/sudo'
 
 IGNORE_WHITESPACE=true
+ITERM_CHECK=true
 
 	# this checks to see if the text is already in the file we want to modify
 if $IGNORE_WHITESPACE; then
@@ -97,28 +98,34 @@ else
 	fi
 fi
 
-	# if iTerm is installed, check to see if one of its settings is set to work with this setting
-	# and if not, tell the user what they need to change
-
-#// if [ -d '/Applications/iTerm.app' -o -d "$HOME/Applications/iTerm.app" ]
-#// then
-#// 
-#// 	PREFERENCE=$(defaults read com.googlecode.iterm2 BootstrapDaemon 2>/dev/null)
-#// 
-#// 	if [[ "$PREFERENCE" == "0" ]]
-#// 	then
-#// 
-#// 		echo "$NAME: 'iTerm' preference is already set properly."
-#// 
-#// 	else
-#// 
-#// 		echo "$NAME [WARNING]: setting iTerm preferences via 'defaults write' may not work while iTerm is running."
-#// 		echo "$NAME [WARNING]: Be sure to turn OFF this setting in iTerm's Preferences:"
-#// 		echo "	Preferences » Advanced » 'Allow sessions to survive logging out and back in'"
-#// 
-#// 	fi
-#// 
-#// fi
+if $ITERM_CHECK; then
+	# If iTerm is installed, tell the user what they need to change to enable this setting
+	if [ -d '/Applications/iTerm.app' ]; then
+		# Read iTerm preference key
+		iTermPref=$( launchctl asuser "$currentUserID" sudo -u "$currentUser" defaults read com.googlecode.iterm2 BootstrapDaemon 2>/dev/null )
+		
+		# If preference needs to be set, show Jamf Helper window with instructions
+		if [[ "$iTermPref" == "0" ]]; then
+			echo "iTerm preference is already set properly. Doing nothing..."
+		else
+			echo "Notifying user which iTerm setting needs to be changed..."
+			# Set notification description
+			description="We have detected that you have iTerm installed. There is an additional step needed to enable this functionality.
+	To enable TouchID for iTerm: Navigate to Preferences » Advanced » Session, then ensure \"Allow sessions to survive logging out and back in\" is set to \"No\""
+			
+			# Display notification
+			"/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper" \
+			-windowType utility \
+			-title "Tech Services Notification" \
+			-heading "Additional Step Required for iTerm" \
+			-description "$description" \
+			-alignDescription left \
+			-icon "/Applications/iTerm.app/Contents/Resources/AppIcon.icns" \
+			-button1 "OK" \
+			-defaultButton 1
+		fi
+	fi
+fi
 
 exit 0
 #EOF
