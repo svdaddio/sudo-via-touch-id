@@ -1,9 +1,4 @@
 #!/usr/bin/env zsh -f
-# Purpose: enable 'sudo' via Touch ID
-#
-# From:	Timothy J. Luoma
-# Mail:	luomat at gmail dot com
-# Date:	2020-01-28
 
 NAME="$0:t:r"
 
